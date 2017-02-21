@@ -1,0 +1,595 @@
+#include <iostream>
+#include <cmath>
+#include <cstdlib>
+#include "math.h"
+#include "fstream"
+#include <time.h>
+#include <ctime>
+
+using namespace std;
+
+double V[5000][5000], D[5000][5000], D2[5000][5000],D3[5000][5000],D4[5000][5000], v[5000][5000], v2[5000][5000],v3[5000][5000],v4[5000][5000];
+bool a[5000][5000];
+
+
+void soln(double gridmax, double d,  double a1, double b1,double r1,  double a2, double b2,double r2, double V0){
+    
+    int x=0,y=0,m=0,l=0, h=gridmax/d, max_it=100;
+    
+    for (x=0;x<=h;x++){
+        for (y=0;y<=h;y++){
+            
+            
+            if ( pow((x*d-a1),2)+pow((y*d-b1),2) <= pow(r1,2) ){  //cycle through and evaluate boundaries
+                
+                V[x][y]=0;
+                a[x][y]=true;
+                
+            }
+            
+            
+            else if (pow((x*d-a2),2)+pow((y*d-b2),2) >= pow(r2,2) && pow((x*d-a2),2)+pow((y*d-b2),2) <= pow(r2+0.008,2)){
+                
+                V[x][y]=V0;
+                a[x][y]=true;
+                cout << x << "    " << y << "   " << endl;
+                
+            }
+            
+            
+            else {
+                
+                V[x][y]=0;
+                a[x][y]=false;
+                
+                
+            }
+            
+            v4[x][y]=0;
+            v3[x][y]=0;
+            v2[x][y]=0;
+            v[x][y]=0;  //initialise everything else to zero
+            D[x][y]=0;
+            D2[x][y]=0;
+            D3[x][y]=0;
+            D4[x][y]=0;
+            
+            
+            
+        }
+    }
+    
+    //initial smoothing using gauss-siedel
+    
+    for (m=0; m<=3; m++){
+        for (x=0;x<=h;x++){
+            for (y=0;y<=h;y++){
+                
+                if (!a[x][y]){
+                    
+                    if ( x==0 ){  //approximations at unset boundaries
+                        
+                        V[x][y]=0.25*(V[x+1][y]+V[x][y]+V[x][y+1]+V[x][y-1]);
+                        
+                    }
+                    
+                    else if (x==h){
+                        
+                        V[x][y]=0.25*(V[x][y]+V[x-1][y]+V[x][y+1]+V[x][y-1]);
+                        
+                    }
+                    
+                    else if (y==0){
+                        
+                        V[x][y]=0.25*(V[x+1][y]+V[x-1][y]+V[x][y+1]+V[x][y]);
+                        
+                    }
+                    
+                    
+                    else if (y==h){
+                        
+                        V[x][y]=0.25*(V[x+1][y]+V[x-1][y]+V[x][y]+V[x][y-1]);
+                        
+                    }
+                    
+                    
+                    else {
+                        
+                        V[x][y]=0.25*(V[x+1][y]+V[x-1][y]+V[x][y+1]+V[x][y-1]);
+                        
+                    }
+                    
+                }
+                
+            }
+        }
+    }
+    
+    while (l<=max_it ){
+        
+      //  cout << l << endl;
+        
+        for (x=0;x<=h;x++){
+            for (y=0;y<=h;y++){
+                
+                if (!a[x][y]){  //find defect on fine grid
+                    
+                    if ( x==0 ){
+                        
+                        D[x][y]=(1/(pow(d,2)))*(V[x][y+1]+V[x][y]-4*V[x][y]+V[x+1][y]+V[x][y-1]);
+                        
+                    }
+                    
+                    else if (x==h){
+                        
+                        D[x][y]=(1/(pow(d,2)))*(V[x][y+1]+V[x-1][y]-4*V[x][y]+V[x][y]+V[x][y-1]);
+                        
+                    }
+                    
+                    else if (y==0){
+                        
+                        D[x][y]=(1/(pow(d,2)))*(V[x][y+1]+V[x-1][y]-4*V[x][y]+V[x+1][y]+V[x][y]);
+                        
+                    }
+                    
+                    
+                    else if (y==h){
+                        
+                        D[x][y]=(1/(pow(d,2)))*(V[x][y]+V[x-1][y]-4*V[x][y]+V[x+1][y]+V[x][y-1]);
+                        
+                    }
+                    
+                    
+                    else {
+                        
+                        D[x][y]=(1/(pow(d,2)))*(V[x][y+1]+V[x-1][y]-4*V[x][y]+V[x+1][y]+V[x][y-1]);
+                        
+                    }
+                    
+                }
+                
+                v2[x][y]=0;
+                v3[x][y]=0;
+                v4[x][y]=0;
+                
+            }
+        }
+        
+        
+        for (x=0;x<=h/2;x++){
+            for (y=0;y<=h/2;y++){  //convert defect onto course grid
+                
+                
+                    
+                    D2[x][y]=D[2*x][2*y];
+                    
+               
+                
+            }
+        }
+        
+        for (m=0; m<=3;m++){
+            for (x=0;x<=h/2;x++){
+                for (y=0;y<=h/2;y++){  //calculate correction on course grid
+                    
+                    if (!a[2*x][2*y]){
+                        
+                        if ( x==0 ){
+                            
+                            v2[x][y]=0.25*((D2[x][y]*(pow(2*d,2)))+v2[x][y+1]+v2[x][y]+v2[x+1][y]+v2[x][y-1]);
+                            
+                        }
+                        
+                        else if (x==h/2){
+                            
+                            v2[x][y]=0.25*((D2[x][y]*(pow(2*d,2)))+v2[x][y+1]+v2[x-1][y]+v2[x][y]+v2[x][y-1]);
+                            
+                        }
+                        
+                        else if (y==0){
+                            
+                            v2[x][y]=0.25*((D2[x][y]*(pow(2*d,2)))+v2[x][y+1]+v2[x-1][y]+v2[x+1][y]+v2[x][y]);
+                            
+                        }
+                        
+                        else if (y==h/2){
+                            
+                            v2[x][y]=0.25*((D2[x][y]*(pow(2*d,2)))+v2[x][y]+v2[x-1][y]+v2[x+1][y]+v2[x][y-1]);
+                            
+                        }
+                        
+                        else {
+                            
+                            v2[x][y]=0.25*((D2[x][y]*(pow(2*d,2)))+v2[x][y+1]+v2[x-1][y]+v2[x+1][y]+v2[x][y-1]);
+                            
+                        }
+                        
+                    }
+                    
+                }
+            }
+        }
+        
+        for (x=0;x<=h/2;x++){
+            for (y=0;y<=h/2;y++){  //calculate defect from correction calculation
+                
+                if (!a[2*x][2*y]){
+                    
+                    if ( x==0 ){
+                        
+                        D3[x][y]=D2[x][y]+(1/(pow(2*d,2)))*(v2[x][y+1]+v2[x][y]+v2[x+1][y]+v2[x][y-1]-4*v2[x][y]);
+                        
+                    }
+                    
+                    else if (x==h/2){
+                        
+                        D3[x][y]=D2[x][y]+(1/(pow(2*d,2)))*(v2[x][y+1]+v2[x-1][y]+v2[x][y]+v2[x][y-1]-4*v2[x][y]);
+                        
+                    }
+                    
+                    else if (y==0){
+                        
+                        D3[x][y]=D2[x][y]+(1/(pow(2*d,2)))*(v2[x][y+1]+v2[x-1][y]+v2[x+1][y]+v2[x][y]-4*v2[x][y]);
+                        
+                    }
+                    
+                    else if (y==h/2){
+                        
+                        D3[x][y]=D2[x][y]+(1/(pow(2*d,2)))*(v2[x][y]+v2[x-1][y]+v2[x+1][y]+v2[x][y-1]-4*v2[x][y]);
+                        
+                    }
+                    
+                    else {
+                        
+                        D3[x][y]=D2[x][y]+(1/(pow(2*d,2)))*(v2[x][y+1]+v2[x-1][y]+v2[x+1][y]+v2[x][y-1]-4*v2[x][y]);
+                        
+                    }
+                    
+                }
+                
+            }
+        }
+        
+        
+        for (x=0;x<=h/4;x++){
+            for (y=0;y<=h/4;y++){  //convert D3 onto courser grid
+                
+          
+                    
+                    D4[x][y]=D3[2*x][2*y];
+                    
+                
+                
+            }
+        }
+        
+        for (m=0; m<=5;m++){
+            for (x=0;x<=h/4;x++){
+                for (y=0;y<=h/4;y++){  //find correction in the correction on the coursest grid using gauss siedel
+                    
+                    if (!a[4*x][4*y]){
+                        
+                        if ( x==0 ){
+                            
+                            v3[x][y]=0.25*((D4[x][y]*(pow(4*d,2)))+v3[x][y+1]+v3[x][y]+v3[x+1][y]+v3[x][y-1]);
+                            
+                        }
+                        
+                        else if (x==h/4){
+                            
+                            v3[x][y]=0.25*((D4[x][y]*(pow(4*d,2)))+v3[x][y+1]+v3[x-1][y]+v3[x][y]+v3[x][y-1]);
+                            
+                        }
+                        
+                        else if (y==0){
+                            
+                            v3[x][y]=0.25*((D4[x][y]*(pow(4*d,2)))+v3[x][y+1]+v2[x-1][y]+v3[x+1][y]+v3[x][y]);
+                            
+                        }
+                        
+                        else if (y==h/4){
+                            
+                            v3[x][y]=0.25*((D4[x][y]*(pow(4*d,2)))+v3[x][y]+v3[x-1][y]+v3[x+1][y]+v3[x][y-1]);
+                            
+                        }
+                        
+                        else {
+                            
+                            v3[x][y]=0.25*((D4[x][y]*(pow(4*d,2)))+v3[x][y+1]+v3[x-1][y]+v3[x+1][y]+v3[x][y-1]);
+                            
+                        }
+                        
+                    }
+                    
+                }
+            }
+        }
+        
+        
+        for (y=0;y<=h/4;y++){
+            for (x=0;x<=h/4;x++){                   //interpolate correction onto 2h grid, matching values
+                
+                
+                    
+                    v4[2*x][2*y]=v3[x][y];
+                    
+                
+            }
+        }
+        
+        
+        for (x=0;x<=h/2;x+=2){
+            for (y=1;y<=h/2;y+=2){
+                //interpolate correction onto 2h grid, even columns
+                
+             
+                    
+                    if (y==h/2){
+                        
+                        v4[x][y]=v4[x][y-1];
+                    }
+                    
+                    else {
+                        
+                        v4[x][y]=0.5*(v4[x][y+1]+v4[x][y-1]);
+                        
+                    }
+               
+                
+            }
+        }
+        
+        
+        for (x=1;x<=h/2;x+=2){
+            for (y=0;y<=h/2;y++){//interpolate correction onto 2h grid, odd columns
+                
+                
+               
+                    
+                    
+                    if (x==h/2){
+                        
+                        v4[x][y]=v4[x-1][y];
+                        
+                    }
+                    
+                    
+                    else {
+                        
+                        v4[x][y]=0.5*(v4[x+1][y]+v4[x-1][y]);
+                        
+                    }
+                    
+                
+                
+            }
+        }
+        
+        for (x=0;x<=h/2;x++){
+            for (y=0;y<=h/2;y++){  //correcting the correction
+                if (!a[2*x][2*y]){
+                    
+                    v2[x][y]=v4[x][y]+v2[x][y];
+                    
+                }
+                
+            }
+            
+        }
+        
+        for (m=0; m<=3;m++){
+            for (x=0;x<=h/2;x++){
+                for (y=0;y<=h/2;y++){  //smoothing the correction on the 2h grid
+                    
+                    if (!a[2*x][2*y]){
+                        
+                        if ( x==0 ){
+                            
+                            v2[x][y]=0.25*((D2[x][y]*(pow(2*d,2)))+v2[x][y+1]+v2[x][y]+v2[x+1][y]+v2[x][y-1]);
+                            
+                        }
+                        
+                        else if (x==h/2){
+                            
+                            v2[x][y]=0.25*((D2[x][y]*(pow(2*d,2)))+v2[x][y+1]+v2[x-1][y]+v2[x][y]+v2[x][y-1]);
+                            
+                        }
+                        
+                        else if (y==0){
+                            
+                            v2[x][y]=0.25*((D2[x][y]*(pow(2*d,2)))+v2[x][y+1]+v2[x-1][y]+v2[x+1][y]+v2[x][y]);
+                            
+                        }
+                        
+                        else if (y==h/2){
+                            
+                            v2[x][y]=0.25*((D2[x][y]*(pow(2*d,2)))+v2[x][y]+v2[x-1][y]+v2[x+1][y]+v2[x][y-1]);
+                            
+                        }
+                        
+                        else {
+                            
+                            v2[x][y]=0.25*((D2[x][y]*(pow(2*d,2)))+v2[x][y+1]+v2[x-1][y]+v2[x+1][y]+v2[x][y-1]);
+                            
+                        }
+                        
+                    }
+                    
+                }
+            }
+        }
+        
+        for (y=0;y<=h/2;y++){
+            for (x=0;x<=h/2;x++){                   //interpolate correction onto fine grid, matching values
+                
+             
+                    
+                    v[2*x][2*y]=v2[x][y];
+                    
+                
+            }
+        }
+        
+        
+        for (x=0;x<=h;x+=2){
+            for (y=1;y<=h;y+=2){
+                //interpolate correction onto fine grid, even columns
+                
+              
+                    
+                    if (y==h){
+                        
+                        v[x][y]=v[x][y-1];
+                    }
+                    
+                    else {
+                        
+                        v[x][y]=0.5*(v[x][y+1]+v[x][y-1]);
+                        
+                    }
+                
+                
+            }
+        }
+        
+        for (x=1;x<=h;x+=2){
+            for (y=0;y<=h;y++){//interpolate correction onto fine grid, odd columns
+                
+       
+                    
+                    
+                    if (x==h){
+                        
+                        v[x][y]=v[x-1][y];
+                        
+                    }
+                    
+                    
+                    else {
+                        
+                        v[x][y]=0.5*(v[x+1][y]+v[x-1][y]);
+                        
+                    }
+                    
+                
+                
+            }
+        }
+        
+        
+        for (x=0;x<=h;x++){
+            for (y=0;y<=h;y++){  //calculate final V values
+                if (!a[x][y]){
+                    
+                    V[x][y]=V[x][y]+v[x][y];
+                    
+                }
+                
+            }
+            
+        }
+        
+        //////////////////////////////////////////////////////////////////////////////////////////
+        
+        //final smoothing using gauss-siedel
+        
+        
+        for (m=0; m<=5; m++){
+            for (x=0;x<=h;x++){
+                for (y=0;y<=h;y++){
+                    
+                    if (!a[x][y]){
+                        
+                        if ( x==0 ){  //approximations at unset boundaries
+                            
+                            V[x][y]=0.25*(V[x+1][y]+V[x][y]+V[x][y+1]+V[x][y-1]);
+                            
+                        }
+                        
+                        else if (x==h){
+                            
+                            V[x][y]=0.25*(V[x][y]+V[x-1][y]+V[x][y+1]+V[x][y-1]);
+                            
+                        }
+                        
+                        else if (y==0){
+                            
+                            V[x][y]=0.25*(V[x+1][y]+V[x-1][y]+V[x][y+1]+V[x][y]);
+                            
+                        }
+                        
+                        
+                        else if (y==h){
+                            
+                            V[x][y]=0.25*(V[x+1][y]+V[x-1][y]+V[x][y]+V[x][y-1]);
+                            
+                        }
+                        
+                        
+                        else {
+                            
+                            V[x][y]=0.25*(V[x+1][y]+V[x-1][y]+V[x][y+1]+V[x][y-1]);
+                            
+                        }
+                    }
+                    
+                }
+            }
+        }
+        
+        l++;
+    }
+    
+    
+    
+    //output all the final V values for all x & y  to a file for plotting
+    
+    
+    ofstream file;
+    file.open("3grid.dat");
+    
+    
+    for (x=0; x<=h; x++){
+        for (y=0; y<=h; y++){
+            
+            file << (x*d) << "      "<< (y*d) << "    " <<  V[x][y] << "\n";
+            
+        }
+        
+        file << "\n";
+    }
+    
+    file.close();
+    
+}
+
+int main(){
+    
+    double gridmax, d, a1, b1, r1, a2, b2, r2, V0;
+    
+    
+    cin >> gridmax;
+    cin >> d;
+    cin >> a1;
+    cin >> b1;
+    cin >> r1;
+    cin >> a2;
+    cin >> b2;
+    cin >> r2;
+    cin >> V0;
+    
+    //input of variables from shell script
+    
+    clock_t t;
+    t = clock();
+    soln(gridmax,d,a1,b1,r1, a2, b2, r2,V0);
+    t = clock() - t;
+    
+    cout << "CPU time=" << (float)t/(CLOCKS_PER_SEC) <<"s." << endl;
+    
+    
+    
+    
+    return 0;
+    
+}
