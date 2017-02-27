@@ -10,15 +10,27 @@
 const int IdRole = Qt::UserRole;
 
 using namespace std;
-
+bool comp1;
+bool comp2;
 
 MainWindow::MainWindow()
 {
 
+
       setMouseTracking(true);
 
-
       renderArea = new RenderArea;
+      renderArea->setMouseTracking(true);
+
+      imageDisplay = new QLabel();
+      imageDisplay2 = new QLabel();
+      drawDisplay= new QLabel();
+
+      imageDisplay->setMouseTracking(true);
+      imageDisplay2->setMouseTracking(true);
+
+      VDisp = new QLabel();
+
 
 
       shapeComboBox = new QComboBox;
@@ -31,14 +43,19 @@ MainWindow::MainWindow()
       shapeLabel = new QLabel(tr("&Shape:"));
       shapeLabel->setBuddy(shapeComboBox);
 
-      VoltageSpinBox = new QSpinBox;
+      VoltageSpinBox = new QDoubleSpinBox;
       VoltageSpinBox->setRange(-1000, 1000);
+      VoltageSpinBox->setDecimals(6);
 
-      VoltageLabel = new QLabel(tr("Boundary voltage:"));
+      VoltageLabel = new QLabel(tr("Voltage:"));
       VoltageLabel->setBuddy(VoltageSpinBox);
 
-      penWidthSpinBox = new QSpinBox;
-      penWidthSpinBox->setRange(0, 20);
+      ETSpinBox = new QDoubleSpinBox;
+      ETSpinBox->setRange(0, 1);
+      ETSpinBox->setDecimals(10);
+
+      ETLabel = new QLabel(tr("Error &Tolerance:"));
+      ETLabel->setBuddy(ETSpinBox);
 
       xGridSizeSpinBox = new QSpinBox;
       xGridSizeSpinBox->setRange(0, 5000);
@@ -52,39 +69,36 @@ MainWindow::MainWindow()
       yGridSizeLabel = new QLabel(tr("y:"));
       yGridSizeLabel->setBuddy(yGridSizeSpinBox);
 
+      coordTitle = new QLabel(tr("Coordinates   ---------------------------------------------------------------------------"));
 
-      penWidthLabel = new QLabel(tr("Pen &Width:"));
-      penWidthLabel->setBuddy(penWidthSpinBox);
+      freehandTitle = new QLabel(tr("Free-hand     ------------------------------------------------------------------------------"));
+
 
       xISpinBox = new QSpinBox;
-      xISpinBox->setRange(0, 500);
+      xISpinBox->setRange(0, 2000);
 
       yISpinBox = new QSpinBox;
-      yISpinBox->setRange(0, 500);
+      yISpinBox->setRange(0, 2000);
 
-      xILabel = new QLabel(tr("Start/Center: x: "));
+      xILabel = new QLabel(tr("Start/Center- x: "));
       xILabel->setBuddy(xISpinBox);
 
       yILabel = new QLabel(tr("y:"));
       yILabel->setBuddy(yISpinBox);
 
       xfSpinBox = new QSpinBox;
-      xfSpinBox->setRange(0, 500);
+      xfSpinBox->setRange(0, 2000);
 
       yfSpinBox = new QSpinBox;
-      yfSpinBox->setRange(0, 500);
+      yfSpinBox->setRange(0, 2000);
 
-      xfLabel = new QLabel(tr("End/radius:   x/r:"));
+      xfLabel = new QLabel(tr("End/Radius- x/r:"));
       xfLabel->setBuddy(xfSpinBox);
 
       yfLabel = new QLabel(tr("y:"));
       yfLabel->setBuddy(yfSpinBox);
 
-
-
-      coordTitle = new QLabel(tr("Coordinates   ---------------------------------------------------------------------------"));
-
-      freehandTitle = new QLabel(tr("Free-hand     ------------------------------------------------------------------------------"));
+      VdispLabel = new QLabel(tr("Potential at mouse:"));
 
       brushStyleComboBox = new QComboBox;
       brushStyleComboBox->addItem(tr("Solid"), static_cast<int>(Qt::SolidPattern));
@@ -105,20 +119,19 @@ MainWindow::MainWindow()
       MethodLabel = new QLabel(tr("Numerical &Method:"));
       MethodLabel->setBuddy(MethodComboBox);
 
-      CoordCheckBox = new QCheckBox(tr("Coordinates ----------------------------"));
+      CoordCheckBox = new QCheckBox(tr("&Coordinates"));
 
-      imageDisplay = new QLabel();
-      imageDisplay2 = new QLabel();
-      drawDisplay = new QLabel();
 
+      //legend = new QLabel();
 
 
 
       Calculate = new QPushButton(tr("GO!"));
       connect(Calculate, SIGNAL (released()),this, SLOT (handleButton()));
 
-      reDraw = new QPushButton(tr("Redraw"));
+      reDraw = new QPushButton(tr("     Redraw     "));
       connect(reDraw, SIGNAL (released()),this, SLOT (handleButton2()));
+
 
       Vector = new QPushButton(tr("Equipotentials"));
       connect(Vector, SIGNAL (released()),this, SLOT (handleButton3()));
@@ -138,19 +151,27 @@ MainWindow::MainWindow()
       InsertCH = new QPushButton(tr("Insert Circle"));
       connect(InsertCH, SIGNAL (released()),this, SLOT (handleButton8()));
 
+      Comp1 = new QPushButton(tr("Comp prob1"));
+      connect(Comp1, SIGNAL (released()),this, SLOT (handleButton9()));
+
+      Comp2 = new QPushButton(tr("Comp prob2"));
+      connect(Comp2, SIGNAL (released()),this, SLOT (handleButton10()));
+
+
 
 
       connect(shapeComboBox, SIGNAL(activated(int)),
               this, SLOT(shape()));
 
-      connect(VoltageSpinBox, SIGNAL(valueChanged(int)),
-              this, SLOT(Voltage()));
+      connect(VoltageSpinBox, SIGNAL(valueChanged(double)),
+                    this, SLOT(Voltage()));
+
 
       connect(brushStyleComboBox, SIGNAL(activated(int)),
               this, SLOT(brushChanged()));
 
-      connect(penWidthSpinBox, SIGNAL(valueChanged(int)),
-                   this, SLOT(penWidth()));
+      connect(ETSpinBox, SIGNAL(valueChanged(double)),
+                         this, SLOT(ET()));
 
       connect(MethodComboBox, SIGNAL(activated(int)),
               this, SLOT(method()));
@@ -177,62 +198,62 @@ MainWindow::MainWindow()
               this, SLOT(ygrid()));
 
       QGridLayout *mainLayout = new QGridLayout;
-        //mainLayout->setColumnStretch(0, 1);
-        //mainLayout->setColumnStretch(1, 5);
 
-        mainLayout->addWidget(Clear,3,5 );
-        mainLayout->addWidget(imageDisplay2, 0, 0, 1, 8);
-        mainLayout->addWidget(imageDisplay, 0, 0, 1, 8);
-        mainLayout->addWidget(drawDisplay, 0, 0, 1, 8);
-        mainLayout->addWidget(renderArea, 0, 0, 1, 8);
-        mainLayout->addWidget(shapeLabel, 7, 0);
-        mainLayout->addWidget(shapeComboBox, 7, 1);
-        //mainLayout->addWidget(coordTitle, 2, 0,1,4);
-        mainLayout->addWidget(freehandTitle,5,0,1,4);
+        mainLayout->addWidget(Clear,3,3);
+        mainLayout->addWidget(imageDisplay2, 0, 0, 1, 6);
+        mainLayout->addWidget(imageDisplay, 0, 0, 1, 6);
+        mainLayout->addWidget(drawDisplay, 0, 0, 1, 6);
+        mainLayout->addWidget(renderArea, 0, 0, 1, 6);
 
-        //mainLayout->addWidget(penWidthLabel, 2, 0, Qt::AlignRight);
-        //mainLayout->addWidget(penWidthSpinBox, 2, 1);
-        mainLayout->addWidget(VoltageLabel, 1,0);
-        mainLayout->addWidget(VoltageSpinBox, 1, 1);
-        mainLayout->addWidget(brushStyleLabel, 6, 0);
-        mainLayout->addWidget(brushStyleComboBox, 6, 1);
-        mainLayout->addWidget(Calculate,3,7 );
-        mainLayout->addWidget(reDraw,3,6 );
-        mainLayout->addWidget(Vector,4,7);
-        mainLayout->addWidget(Heat,4,6);
-        mainLayout->addWidget(CoordCheckBox, 2, 0, 1, 4);
-        mainLayout->addWidget(MethodLabel, 2, 5);
-        mainLayout->addWidget(MethodComboBox, 2, 6,1,2);
+        mainLayout->addWidget(shapeLabel, 3, 0, Qt::AlignRight);
+        mainLayout->addWidget(shapeComboBox, 3, 1);
+        mainLayout->addWidget(ETLabel, 1, 2, Qt::AlignRight);
+        mainLayout->addWidget(ETSpinBox, 1, 3);
+        mainLayout->addWidget(VoltageLabel, 2, 0, Qt::AlignRight);
+        mainLayout->addWidget(VoltageSpinBox, 2, 1);
+        mainLayout->addWidget(brushStyleLabel, 4, 0, Qt::AlignRight);
+        mainLayout->addWidget(brushStyleComboBox, 4, 1);
+        mainLayout->addWidget(VdispLabel,1,0, Qt::AlignRight);
+        mainLayout->addWidget(VDisp, 1, 1);
+        mainLayout->addWidget(Comp1,5,4);
+        mainLayout->addWidget(Comp2,5,5);
+        mainLayout->addWidget(Calculate,3,4);
+        mainLayout->addWidget(reDraw,3,5);
+        mainLayout->addWidget(Vector,4,5);
+        mainLayout->addWidget(Heat,4,4);
+        mainLayout->addWidget(CoordCheckBox, 5, 0, Qt::AlignRight);
+        mainLayout->addWidget(MethodLabel, 1, 4, Qt::AlignRight);
+        mainLayout->addWidget(MethodComboBox, 1, 5);
 
-        mainLayout->addWidget(InsertL,3,4);
-        mainLayout->addWidget(InsertC,4,4);
-        mainLayout->addWidget(InsertCH,5,4);
+        mainLayout->addWidget(InsertL,7,4);
+        mainLayout->addWidget(InsertC,8,4);
+        mainLayout->addWidget(InsertCH,8,5);
 
-        mainLayout->addWidget(xILabel, 3, 0);
-        mainLayout->addWidget(xISpinBox, 3, 1);
-        mainLayout->addWidget(yILabel, 3, 2 );
-        mainLayout->addWidget(yISpinBox, 3, 3);
-        mainLayout->addWidget(xfLabel, 4, 0);
-        mainLayout->addWidget(xfSpinBox, 4, 1);
-        mainLayout->addWidget(yfLabel, 4, 2 );
-        mainLayout->addWidget(yfSpinBox, 4, 3);
-        mainLayout->addWidget(xGridSizeLabel, 1, 4);
-        mainLayout->addWidget(yGridSizeLabel, 1, 6 );
-        mainLayout->addWidget(xGridSizeSpinBox, 1, 5 );
-        mainLayout->addWidget(yGridSizeSpinBox, 1, 7);
+        mainLayout->addWidget(xILabel, 7, 0, Qt::AlignRight);
+        mainLayout->addWidget(xISpinBox, 7, 1);
+        mainLayout->addWidget(yILabel, 7, 2, Qt::AlignRight);
+        mainLayout->addWidget(yISpinBox, 7, 3);
+        mainLayout->addWidget(xfLabel, 8, 0, Qt::AlignRight);
+        mainLayout->addWidget(xfSpinBox, 8, 1);
+        mainLayout->addWidget(yfLabel, 8, 2, Qt::AlignRight);
+        mainLayout->addWidget(yfSpinBox, 8, 3);
+        mainLayout->addWidget(xGridSizeLabel, 2, 2, Qt::AlignRight);
+        mainLayout->addWidget(yGridSizeLabel, 2, 4, Qt::AlignRight);
+        mainLayout->addWidget(xGridSizeSpinBox, 2, 3);
+        mainLayout->addWidget(yGridSizeSpinBox, 2, 5);
 
         setLayout(mainLayout);
 
 
 
 
-       setMinimumSize(QSize());
-       setMaximumSize(QSize());
+       //setMinimumSize(QSize());
+       //setMaximumSize(QSize());
 
     brushChanged();
     shape();
     Voltage();
-    penWidth();
+    ET();
     method();
 
     //setWindowTitle(tr("Solution to Laplace's Equation"));
@@ -244,8 +265,6 @@ void MainWindow::handleButton()
 {
 
     renderArea->Calc();
-
-    cout << Vmax << " " << Vmin << endl;
 
     if(Vmax>0){
         if(Vmin<0){
@@ -265,10 +284,14 @@ void MainWindow::handleButton()
  QPixmap pix("./SOR3.jpg");
  int we = renderArea->width();
  int h = renderArea->height();
+
  imageDisplay->setPixmap(pix.scaled(we,h));
 
+    comp1=false;
+    comp2=false;
     imageDisplay->show();
     imageDisplay->activateWindow();
+
     imageDisplay->raise();
 
     system("./draft2.sh");
@@ -277,18 +300,23 @@ QPixmap pix2("./contour1.jpg");
 imageDisplay2->setPixmap(pix2.scaled(we,h));
 
 
+
 }
 
 void MainWindow::handleButton2()
 {
-    renderArea->show();
-    renderArea->activateWindow();
-    renderArea->raise();
+        comp1=false;
+        comp2=false;
+        renderArea->show();
+        renderArea->activateWindow();
+        renderArea->raise();
+
 }
 
 void MainWindow::handleButton3()
 {
-
+    comp1=false;
+    comp2=false;
     imageDisplay2->show();
     imageDisplay2->activateWindow();
     imageDisplay2->raise();
@@ -297,6 +325,8 @@ void MainWindow::handleButton3()
 void MainWindow::handleButton4()
 {
 
+    comp1=false;
+    comp2=false;
     imageDisplay->show();
     imageDisplay->activateWindow();
     imageDisplay->raise();
@@ -305,6 +335,8 @@ void MainWindow::handleButton4()
 
 void MainWindow::handleButton5()
 {
+    comp1=false;
+    comp2=false;
     renderArea->clearImage();
     renderArea->show();
     renderArea->activateWindow();
@@ -353,7 +385,8 @@ void MainWindow::handleButton6()
     }
 
     drawDisplay->setPixmap(pix->scaled(we,h));
-
+    comp1=false;
+    comp2=false;
     drawDisplay->show();
     drawDisplay->activateWindow();
     drawDisplay->raise();
@@ -400,7 +433,8 @@ void MainWindow::handleButton7()
 
     }
     drawDisplay->setPixmap(pix->scaled(we,h));
-
+    comp1=false;
+    comp2=false;
     drawDisplay->show();
     drawDisplay->activateWindow();
     drawDisplay->raise();
@@ -447,10 +481,51 @@ void MainWindow::handleButton8()
 
     }
     drawDisplay->setPixmap(pix->scaled(we,h));
-
+    comp1=false;
+    comp2=false;
     drawDisplay->show();
     drawDisplay->activateWindow();
     drawDisplay->raise();
+}
+
+void MainWindow::handleButton9()
+{
+
+    renderArea->comp1();
+
+system("./draft5.sh");
+
+ QPixmap pix("./SOR3.jpg");
+ int we = renderArea->width();
+ int h = renderArea->height();
+ imageDisplay->setPixmap(pix.scaled(we,h));
+
+    comp1=true;
+    comp2=false;
+    imageDisplay->show();
+    imageDisplay->activateWindow();
+    imageDisplay->raise();
+
+
+}
+
+void MainWindow::handleButton10()
+{
+    renderArea->comp2();
+
+system("./draft5.sh");
+
+ QPixmap pix("./SOR3.jpg");
+ int we = renderArea->width();
+ int h = renderArea->height();
+ imageDisplay->setPixmap(pix.scaled(we,h));
+
+    comp1=false;
+    comp2=true;
+    imageDisplay->show();
+    imageDisplay->activateWindow();
+    imageDisplay->raise();
+
 }
 
 void MainWindow::shape()
@@ -517,16 +592,164 @@ void MainWindow::penColor()
         renderArea->setPenColor(newColor);
 }
 
-void MainWindow::penWidth()
+void MainWindow::ET()
 {
-    int newWidth = penWidthSpinBox->value();
-    renderArea->setPenWidth(newWidth);      //(QPen(Qt::blue, width));
+
+    double newET = ETSpinBox->value();
+
+    renderArea->setET(newET);
 }
 
 void MainWindow::Voltage()
 {
     float newVoltage = VoltageSpinBox->value();
     renderArea->setVoltage(newVoltage);
+
 }
+
+void MainWindow::mouseMoveEvent(QMouseEvent *event)
+{
+    int we = renderArea->width();
+    int h = renderArea->height();
+    int xr=renderArea->x();
+    int yr=renderArea->y();
+    int xgr = xGridSizeSpinBox->value();
+    int ygr = yGridSizeSpinBox->value();
+    double WE= renderArea->width();
+    double XGR = xGridSizeSpinBox->value();
+    double H=renderArea->height();
+    double YGR=yGridSizeSpinBox->value();
+    int x=(int) rint((XGR/WE)*abs(xr-event->x()));
+    int y=(int) rint((YGR/H)*abs(yr-event->y()));
+
+
+    if (comp1==true){
+        if(CoordCheckBox->isChecked()==false){
+            if (event->x()>=xr && event->y()>=yr){
+
+                if(((event->x())>=(xr+we)) || ((event->y())>=(yr+h))){
+
+            //cout<<"bla"<<endl;
+
+                }
+                else if (((event->x())<=(xr+we)) || ((event->y())<=(yr+h))){
+
+                    VDisp->setNum(V[abs(xr-event->x())][abs(yr-event->y())]);
+                    }
+            }
+            else {
+            //cout<<"No Pot"<<endl;
+            }
+        }
+        else{
+            if (event->x()>=xr && event->y()>=yr){
+
+                if(((event->x())>=(xr+xgr)) || ((event->y())>=(yr+ygr))){
+
+                //cout<<"bla"<<endl;
+
+                }
+                else if (((event->x())<=(xr+xgr)) || ((event->y())<=(yr+ygr))){
+
+
+
+
+                    VDisp->setNum(V[x][y]);
+                    }
+            }
+            else {
+            //cout<<"No Pot"<<endl;
+            }
+
+        }
+    }
+    else if (comp2==true){
+        if(CoordCheckBox->isChecked()==false){
+            if (event->x()>=xr && event->y()>=yr){
+
+                if(((event->x())>=(xr+we)) || ((event->y())>=(yr+h))){
+
+            //cout<<"bla"<<endl;
+
+                }
+                else if (((event->x())<=(xr+we)) || ((event->y())<=(yr+h))){
+
+                    VDisp->setNum(V[abs(xr-event->x())][abs(yr-event->y())]);
+                    }
+            }
+            else {
+            //cout<<"No Pot"<<endl;
+            }
+        }
+        else{
+            if (event->x()>=xr && event->y()>=yr){
+
+                if(((event->x())>=(xr+xgr)) || ((event->y())>=(yr+ygr))){
+
+                //cout<<"bla"<<endl;
+
+                }
+                else if (((event->x())<=(xr+xgr)) || ((event->y())<=(yr+ygr))){
+
+
+
+
+                    VDisp->setNum(V[x][y]);
+                    }
+            }
+            else {
+            //cout<<"No Pot"<<endl;
+            }
+
+        }
+        }
+    else {
+        if(CoordCheckBox->isChecked()==false){
+            if (event->x()>=xr && event->y()>=yr){
+
+                if(((event->x())>=(xr+we)) || ((event->y())>=(yr+h))){
+
+            //cout<<"bla"<<endl;
+
+                }
+                else if (((event->x())<=(xr+we)) || ((event->y())<=(yr+h))){
+
+                    VDisp->setNum(V[abs(xr-event->x())][abs(yr-event->y())]);
+                    }
+            }
+            else {
+            //cout<<"No Pot"<<endl;
+            }
+        }
+        else{
+            if (event->x()>=xr && event->y()>=yr){
+
+                if(((event->x())>=(xr+xgr)) || ((event->y())>=(yr+ygr))){
+
+                //cout<<"bla"<<endl;
+
+                }
+                else if (((event->x())<=(xr+xgr)) || ((event->y())<=(yr+ygr))){
+
+
+
+
+                    VDisp->setNum(V[x][y]);
+                    }
+            }
+            else {
+            //cout<<"No Pot"<<endl;
+            }
+
+        }
+
+    }
+
+
+
+//cout<<V[abs(xr-event->x())][abs(yr-event->y())]<<endl;
+
+}
+
 
 
